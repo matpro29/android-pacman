@@ -6,36 +6,37 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
-    TextView tv1;
-    TextView tv2;
-    TextView tv3;
+    Panel panel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        tv1 = findViewById(R.id.tv1);
-        tv2 = findViewById(R.id.tv2);
-        tv3 = findViewById(R.id.tv3);
-
         SensorManager sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION), 0, null);
+        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION), sensorManager.SENSOR_DELAY_NORMAL, null);
 
-
-        Panel panel = new Panel(this);
+        panel = new Panel(this);
         setContentView(panel);
     }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        tv1.setText("event.values[0] = " + Float.toString(event.values[0]));
-        tv2.setText("event.values[1] = " + Float.toString(event.values[1]));
-        tv3.setText("event.values[2] = " + Float.toString(event.values[2]));
+        if ((int) event.values[1] > 10) {
+            panel.zmnienKierunekPacman(0); //góra
+        }
+        if ((int) event.values[1] < -10) {
+            panel.zmnienKierunekPacman(2); //dół
+        }
+        if ((int) event.values[2] > 10) {
+            panel.zmnienKierunekPacman(3); //lewo
+        }
+        if ((int) event.values[2] < -10) {
+            panel.zmnienKierunekPacman(1); //prawo
+        }
     }
 
     @Override
