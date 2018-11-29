@@ -25,6 +25,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         SensorManager sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION), 0, null);
+
+
+        Panel panel = new Panel(this);
+        setContentView(panel);
     }
 
     @Override
