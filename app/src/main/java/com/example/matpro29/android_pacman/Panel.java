@@ -6,14 +6,16 @@ import android.graphics.drawable.Drawable;
 import android.util.DisplayMetrics;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.Toast;
 
 public class Panel extends View {
     private final int CZEKAJ_DUCH_CYKL = 5;//opuźnienie duchów na "skrzyżowaniach"
     private final int SZEROKOSC_PLANSZA = 19;//szerokosc planszy
     private final int WYSOKOSC_PLANSZA = 22;//wysokosc planszy
-    private int ROZMIAR_GRAFIKA;//15;//rozmiar obrazków w px
+    private final int SZYBKOSC_GRY = 15;//szybkosc gry
+    private int ROZMIAR_GRAFIKA;//rozmiar obrazków w px
     private final int LICZBA_POZIOM = 2;//liczba poziomów
-    private final int[] PUNKTY_MAX = {156, 193};//liczba wszystkich punktów
+    private final int[] PUNKTY_MAX = {156, 194};//liczba wszystkich punktów
     private int kierunekPacman;//kierunek poruszania się pacmana
     private int poziom;//numer planszy
     private int liczbaDuch;//liczba duchów
@@ -21,7 +23,7 @@ public class Panel extends View {
     private int staraPozycjaPacman;//poprzednia pozycja gracza
     private int nastepnyKierunekPacman = 5;//przechowuje nastepny kierunek Pacmana, 5-brak następnego kierunku
     private boolean start = false;//czy gra wystartowała
-    public int gra = 1;//stan gry|0-przegrana|1-gra|2-wygrana
+    private int gra = 1;//stan gry|0-przegrana|1-gra|2-wygrana
     private int[] czekajDuch = new int[4];//przechowuje liczbe cykli, w których duch "zastanawiał się"
     private int[] spijDuch = new int[4];
     private int[] pozycjaDuch = new int[4];//pozycje duchów
@@ -31,6 +33,10 @@ public class Panel extends View {
     private int[] tempDuch = new int[4];//tablica pomocnicza do sprawdzania możliwych dróg dla duchów
     private int[] tempPacman = new int[4];//tablica pomocnicza do sprawdzania możliwych dróg dla Pacmana
     private int[][] Plansza = new int[][]{//plansze
+        new int[418],//poziom 1
+        new int[418]//poziom 2
+    };
+    private int[][] PlanszaReload = new int[][]{//plansze
             new int[]{//poziom 1
                     17, 11, 11, 11, 11, 11, 11, 11, 11, 22, 11, 11, 11, 11, 11, 11, 11, 11, 18,
                     10, 8, 8, 8, 8, 8, 8, 8, 8, 10, 8, 8, 8, 8, 8, 8, 8, 8, 10,
@@ -80,7 +86,6 @@ public class Panel extends View {
                     16, 11, 11, 11, 11, 20, 11, 11, 11, 11, 11, 11, 11, 11, 20, 11, 11, 11, 19
             }
     };
-
     private String[] nazwy = {//tablica z nazwami obrazków
             "pacmanw", //kod 0
             "pacmand", //kod 1
@@ -109,31 +114,30 @@ public class Panel extends View {
             "sciana15" //kod 24
     };
     private Drawable obrazy[] = new Drawable[nazwy.length];//tablica z obrazami
-    private int width;
-    private int height;
+    private int width;//szerokosc wyświetlacza w px
+    private int border;//ramka potrzebna do wyśrodkowania planszy
+    private int cykl;//licznik cykli
     private Context context;
-    private int border;
-    private int czas;
-
 
     public Panel(Context context) {
         super(context);
         this.setFocusableInTouchMode(true);
         this.context = context;
+
         DisplayMetrics displayMetrics = new DisplayMetrics();
         ((MainActivity) getContext()).getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
 
         width = displayMetrics.widthPixels;
 
-        height = displayMetrics.heightPixels;
         ROZMIAR_GRAFIKA = width / SZEROKOSC_PLANSZA;
         border = (width - ROZMIAR_GRAFIKA * SZEROKOSC_PLANSZA) / 2;
-
 
         for (int i = 0; i < nazwy.length; i++) {//pobieranie obrazków do tablicy
             obrazy[i] = this.getResources().getDrawable(context.getResources().getIdentifier(nazwy[i], "drawable", context.getPackageName()));
         }
-        czas = 0;
+
+        cykl = 0;
+        kopiaPlansza();
         startGra();
         ustawPlansza();
     }
@@ -150,7 +154,14 @@ public class Panel extends View {
     public boolean onTouchEvent(MotionEvent event) {
         switch (event.getAction()) {
             case MotionEvent.ACTION_MOVE:
-                setStart(true);
+                if (gra == 0) {
+                    kopiaPlansza();
+                    startGra();
+                    ustawPlansza();
+                    setGra(1);
+                } else {
+                    setStart(true);
+                }
         }
         return true;
     }
@@ -289,7 +300,7 @@ public class Panel extends View {
             sprawdzPrzegrana();
             czyZmienicKierunekPacman();
 
-            if (czas == 20) {
+            if (cykl == SZYBKOSC_GRY) {
                 przesunPacman();
                 switch (liczbaDuch) {
                     case 4:
@@ -301,9 +312,9 @@ public class Panel extends View {
                     case 1:
                         przesunDuch(0);
                 }
-                czas = 0;
+                cykl = 0;
             } else {
-                czas++;
+                cykl++;
             }
         }
     }
@@ -356,14 +367,15 @@ public class Panel extends View {
     private void przesunPacman() {//zmienia pozycja pacmana zgodnie z jego kierunkiem poruszania
         switch (kierunekPacman) {
             case 0:
-                if (Plansza[poziom][pozycjaPacman - SZEROKOSC_PLANSZA] <= 10) {
+                if (Plansza[poziom][pozycjaPacman - SZEROKOSC_PLANSZA] < 10) {
                     staraPozycjaPacman = pozycjaPacman;
                     pozycjaPacman -= SZEROKOSC_PLANSZA;
                 }
                 break;
             case 1:
-                if (poziom == 0 && ((pozycjaPacman == 208 && Plansza[poziom][pozycjaPacman - SZEROKOSC_PLANSZA + 1] <= 10)
-                        || (pozycjaPacman != 208 && Plansza[poziom][pozycjaPacman + 1] <= 10))) {
+                if (poziom == 0 && ((pozycjaPacman == 208 && Plansza[poziom][pozycjaPacman - SZEROKOSC_PLANSZA + 1] < 10)
+                        || (pozycjaPacman != 208 && Plansza[poziom][pozycjaPacman + 1] < 10))
+                        || (poziom == 1 && Plansza[poziom][pozycjaPacman + 1] < 10)) {
                     staraPozycjaPacman = pozycjaPacman;
                     if (pozycjaPacman == 208 && poziom == 0) {//teleport
                         pozycjaPacman -= SZEROKOSC_PLANSZA;
@@ -372,14 +384,15 @@ public class Panel extends View {
                 }
                 break;
             case 2:
-                if (Plansza[poziom][pozycjaPacman + SZEROKOSC_PLANSZA] <= 10) {
+                if (Plansza[poziom][pozycjaPacman + SZEROKOSC_PLANSZA] < 10) {
                     staraPozycjaPacman = pozycjaPacman;
                     pozycjaPacman += SZEROKOSC_PLANSZA;
                 }
                 break;
             case 3:
-                if (poziom == 0 && ((pozycjaPacman == 190 && Plansza[poziom][pozycjaPacman + SZEROKOSC_PLANSZA - 1] <= 10)
-                        || (pozycjaPacman != 190 && Plansza[poziom][pozycjaPacman - 1] <= 10))) {
+                if ((poziom == 0 && ((pozycjaPacman == 190 && Plansza[poziom][pozycjaPacman + SZEROKOSC_PLANSZA - 1] < 10)
+                        || (pozycjaPacman != 190 && Plansza[poziom][pozycjaPacman - 1] < 10)))
+                        || (poziom == 1 && Plansza[poziom][pozycjaPacman - 1] < 10)) {
                     staraPozycjaPacman = pozycjaPacman;
                     if (pozycjaPacman == 190 && poziom == 0) {//teleport
                         pozycjaPacman += SZEROKOSC_PLANSZA;
@@ -550,7 +563,10 @@ public class Panel extends View {
     private void sprawdzPrzegrana() {//sprawdza "sptkanie" pacmana z duchami
         for (int i = 0; i < liczbaDuch; i++) {
             if (pozycjaPacman == pozycjaDuch[i]) {//przegrana
-                gra = 0;
+                setGra(0);
+                setStart(false);
+                setPoziom(0);
+                Toast.makeText(context, "Przegrałeś!", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -564,19 +580,11 @@ public class Panel extends View {
             }
         }
         int[] temp = {0, 0, 0, 0};//tablica pomocnicza przechowująca pozycje duchów
-        for (i = 0; i < 4; i++) {//sprawdza, czy duch jest na polu z punktem
-            temp[i] = pozycjaDuch[i];
-            boolean innaPozycja = true;
-            for (int j = 0; j < 4; j++) {
-                if (pozycjaDuch[i] == temp[j] && i != j) {
-                    innaPozycja = false;
-                }
-            }
-            if (innaPozycja) {
+        for (i = 0; i < historiaDuch.length; i++) {//sprawdza, czy duch jest na polu z punktem
+            if (historiaDuch[i] == 8) {
                 pkt++;
             }
         }
-
         if (liczbaDuch < 4) {
             switch (liczbaDuch) {//zwiększa liczbę duchów, gdy:
                 case 1:
@@ -598,11 +606,15 @@ public class Panel extends View {
         }
         if (pkt == 0) {//wygrana, jeśli zebrano wszystkie punkty
             if (poziom + 1 == LICZBA_POZIOM) {
-                gra = 3;
-                start = false;
+                setGra(3);
+                setStart(false);
+                Toast.makeText(context, "Wygrałeś!", Toast.LENGTH_SHORT).show();
+                nastepnyPoziom();
             } else {
-                gra = 2;
-                start = false;
+                Toast.makeText(context, "Wygrałeś "+(poziom+1)+" poziom!", Toast.LENGTH_SHORT).show();
+                setGra(2);
+                setStart(false);
+                nastepnyPoziom();
             }
         }
     }
@@ -635,12 +647,15 @@ public class Panel extends View {
         czekajDuch[3] = 0;
     }
 
-    public void nastepnyPoziom() {//ustawia następny poziom
+    private void nastepnyPoziom() {//ustawia następny poziom
         if (poziom + 1 < LICZBA_POZIOM) {
             poziom++;
             wczytajNastepnyPoziom();
         } else {
-            gra = 3;
+            setPoziom(0);
+            kopiaPlansza();
+            startGra();
+            ustawPlansza();
         }
     }
 
@@ -678,5 +693,25 @@ public class Panel extends View {
 
     private void setStart(boolean start) {
         this.start = start;
+    }
+
+    public boolean getStart() {
+        return start;
+    }
+
+    public void setGra(int gra) {
+        this.gra = gra;
+    }
+
+    public void setPoziom(int poziom) {
+        this.poziom = poziom;
+    }
+
+    public void kopiaPlansza() {
+        for (int i=0; i<LICZBA_POZIOM; i++) {
+            for (int j=0; j<Plansza[i].length; j++) {
+                Plansza[i][j] = PlanszaReload[i][j];
+            }
+        }
     }
 }

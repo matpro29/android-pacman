@@ -25,17 +25,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        if ((int) event.values[1] > 10) {
-            panel.zmnienKierunekPacman(0); //góra
-        }
-        if ((int) event.values[1] < -10) {
-            panel.zmnienKierunekPacman(2); //dół
-        }
-        if ((int) event.values[2] > 10) {
-            panel.zmnienKierunekPacman(3); //lewo
-        }
-        if ((int) event.values[2] < -10) {
-            panel.zmnienKierunekPacman(1); //prawo
+        if (panel.getStart()) {
+            if ((int) event.values[1] > 5) {
+                panel.zmnienKierunekPacman(0); //góra
+            }
+            if ((int) event.values[1] < -5) {
+                panel.zmnienKierunekPacman(2); //dół
+            }
+            if ((int) event.values[2] > 5) {
+                panel.zmnienKierunekPacman(3); //lewo
+            }
+            if ((int) event.values[2] < -5) {
+                panel.zmnienKierunekPacman(1); //prawo
+            }
         }
     }
 
