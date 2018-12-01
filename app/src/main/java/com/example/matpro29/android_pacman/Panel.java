@@ -566,6 +566,9 @@ public class Panel extends View {
                 setGra(0);
                 setStart(false);
                 setPoziom(0);
+                kopiaPlansza();
+                startGra();
+                ustawPlansza();
                 Toast.makeText(context, "Przegrałeś!", Toast.LENGTH_SHORT).show();
             }
         }
@@ -579,7 +582,6 @@ public class Panel extends View {
                 pkt++;
             }
         }
-        int[] temp = {0, 0, 0, 0};//tablica pomocnicza przechowująca pozycje duchów
         for (i = 0; i < historiaDuch.length; i++) {//sprawdza, czy duch jest na polu z punktem
             if (historiaDuch[i] == 8) {
                 pkt++;
