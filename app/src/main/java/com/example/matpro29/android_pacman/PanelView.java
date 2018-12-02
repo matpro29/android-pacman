@@ -144,16 +144,10 @@ public class PanelView extends View {
 
         gyroscopeLeft = width;
         gyroscopeTop = height-ROZMIAR_GRAFIKA*WYSOKOSC_PLANSZA-borderLeft-borderTop;
-        if (gyroscopeLeft < gyroscopeTop) {
-            gyroscopeLeft /= 3;
-            gyroscopeWidth = gyroscopeLeft;
-            gyroscopeTop = ROZMIAR_GRAFIKA*WYSOKOSC_PLANSZA-borderLeft-borderTop+(gyroscopeTop-gyroscopeWidth)/2;
-        } else {
-            gyroscopeTop /= 3;
-            gyroscopeWidth = gyroscopeTop;
-            gyroscopeLeft = (gyroscopeLeft-gyroscopeWidth)/2;
-            gyroscopeTop += ROZMIAR_GRAFIKA*WYSOKOSC_PLANSZA-borderLeft-borderTop;
-        }
+
+        gyroscopeLeft /= 3;
+        gyroscopeWidth = gyroscopeLeft;
+        gyroscopeTop = ROZMIAR_GRAFIKA*WYSOKOSC_PLANSZA-borderLeft-borderTop+(gyroscopeTop-gyroscopeWidth)/3;
 
         gyroscope = this.getResources().getDrawable(context.getResources().getIdentifier("gyroscope", "drawable", context.getPackageName()));
         for (int i = 0; i < nazwy.length; i++) {//pobieranie obrazków do tablicy
@@ -189,9 +183,7 @@ public class PanelView extends View {
                         ustawPlansza();
                         setGra(1);
                     }
-                    if (start) {
-                        setStart(false);
-                    } else {
+                    if (!start) {
                         setStart(true);
                     }
                 } else if (touchX > gyroscopeLeft
