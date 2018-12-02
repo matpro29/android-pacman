@@ -10,7 +10,9 @@ import android.view.WindowManager;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
-    Panel panel;
+    private PanelView panelView;
+    private int gyroscopeX = 0;
+    private int gyroscopeY = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -22,25 +24,30 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         SensorManager sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION), sensorManager.SENSOR_DELAY_NORMAL, null);
 
-        panel = new Panel(this);
-        setContentView(panel);
+        panelView = new PanelView(this);
+        setContentView(panelView);
     }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        if (panel.getStart()) {
-            if ((int) event.values[1] > 5) {
-                panel.zmnienKierunekPacman(0); //góra
+        if (panelView.getStart()) {
+            if ((int) event.values[1] > gyroscopeX+5) {
+                panelView.zmnienKierunekPacman(0);//góra
             }
-            if ((int) event.values[1] < -5) {
-                panel.zmnienKierunekPacman(2); //dół
+            if ((int) event.values[1] < gyroscopeX-5) {
+                panelView.zmnienKierunekPacman(2);//dół
             }
-            if ((int) event.values[2] > 5) {
-                panel.zmnienKierunekPacman(3); //lewo
+            if ((int) event.values[2] > gyroscopeY+5) {
+                panelView.zmnienKierunekPacman(3);//lewo
             }
-            if ((int) event.values[2] < -5) {
-                panel.zmnienKierunekPacman(1); //prawo
+            if ((int) event.values[2] < gyroscopeY-5) {
+                panelView.zmnienKierunekPacman(1);//prawo
             }
+        }
+        if (panelView.getGyroscopeConfig()) {
+            gyroscopeX = (int)event.values[1];
+            gyroscopeY = (int)event.values[2];
+            panelView.setGyroscopeConfig(false);
         }
     }
 

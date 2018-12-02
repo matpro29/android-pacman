@@ -2,13 +2,14 @@ package com.example.matpro29.android_pacman;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.util.DisplayMetrics;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
 
-public class Panel extends View {
+public class PanelView extends View {
     private final int CZEKAJ_DUCH_CYKL = 5;//opuźnienie duchów na "skrzyżowaniach"
     private final int SZEROKOSC_PLANSZA = 19;//szerokosc planszy
     private final int WYSOKOSC_PLANSZA = 22;//wysokosc planszy
@@ -33,8 +34,8 @@ public class Panel extends View {
     private int[] tempDuch = new int[4];//tablica pomocnicza do sprawdzania możliwych dróg dla duchów
     private int[] tempPacman = new int[4];//tablica pomocnicza do sprawdzania możliwych dróg dla Pacmana
     private int[][] Plansza = new int[][]{//plansze
-        new int[418],//poziom 1
-        new int[418]//poziom 2
+            new int[418],//poziom 1
+            new int[418]//poziom 2
     };
     private int[][] PlanszaReload = new int[][]{//plansze
             new int[]{//poziom 1
@@ -113,13 +114,20 @@ public class Panel extends View {
             "sciana14", //kod 23
             "sciana15" //kod 24
     };
+    private Drawable gyroscope;//przyciks z zyroskopem
     private Drawable obrazy[] = new Drawable[nazwy.length];//tablica z obrazami
+    private int height;//wysokość wyświetlacza w px
     private int width;//szerokosc wyświetlacza w px
-    private int border;//ramka potrzebna do wyśrodkowania planszy
+    private int borderLeft;//ramka potrzebna do wyśrodkowania planszy od lewej
+    private int borderTop;//ramka potrzebna do wyśrodkowania planszy od góry
     private int cykl;//licznik cykli
     private Context context;
+    private int gyroscopeLeft;//odległość przycisku od lewej
+    private int gyroscopeTop;//odległość przycisku od góry
+    private int gyroscopeWidth;//szerokosc przycisku
+    private boolean gyroscopeConfig = false;//konfiguracja zyroskopu
 
-    public Panel(Context context) {
+    public PanelView(Context context) {
         super(context);
         this.setFocusableInTouchMode(true);
         this.context = context;
@@ -127,11 +135,27 @@ public class Panel extends View {
         DisplayMetrics displayMetrics = new DisplayMetrics();
         ((MainActivity) getContext()).getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
 
+        height = displayMetrics.heightPixels;
         width = displayMetrics.widthPixels;
 
         ROZMIAR_GRAFIKA = width / SZEROKOSC_PLANSZA;
-        border = (width - ROZMIAR_GRAFIKA * SZEROKOSC_PLANSZA) / 2;
+        borderLeft = (width - ROZMIAR_GRAFIKA * SZEROKOSC_PLANSZA) / 2;
+        borderTop = borderLeft;
 
+        gyroscopeLeft = width;
+        gyroscopeTop = height-ROZMIAR_GRAFIKA*WYSOKOSC_PLANSZA-borderLeft-borderTop;
+        if (gyroscopeLeft < gyroscopeTop) {
+            gyroscopeLeft /= 3;
+            gyroscopeWidth = gyroscopeLeft;
+            gyroscopeTop = ROZMIAR_GRAFIKA*WYSOKOSC_PLANSZA-borderLeft-borderTop+(gyroscopeTop-gyroscopeWidth)/2;
+        } else {
+            gyroscopeTop /= 3;
+            gyroscopeWidth = gyroscopeTop;
+            gyroscopeLeft = (gyroscopeLeft-gyroscopeWidth)/2;
+            gyroscopeTop += ROZMIAR_GRAFIKA*WYSOKOSC_PLANSZA-borderLeft-borderTop;
+        }
+
+        gyroscope = this.getResources().getDrawable(context.getResources().getIdentifier("gyroscope", "drawable", context.getPackageName()));
         for (int i = 0; i < nazwy.length; i++) {//pobieranie obrazków do tablicy
             obrazy[i] = this.getResources().getDrawable(context.getResources().getIdentifier(nazwy[i], "drawable", context.getPackageName()));
         }
@@ -144,6 +168,7 @@ public class Panel extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
+        this.setBackgroundColor(getResources().getColor(R.color.black));
         rysujPlansza(canvas);
         naprawPlansza();
         update();
@@ -152,15 +177,28 @@ public class Panel extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        float touchX = event.getX();
+        float touchY = event.getY();
+
         switch (event.getAction()) {
             case MotionEvent.ACTION_MOVE:
-                if (gra == 0) {
-                    kopiaPlansza();
-                    startGra();
-                    ustawPlansza();
-                    setGra(1);
-                } else {
-                    setStart(true);
+                if (touchY < ROZMIAR_GRAFIKA*WYSOKOSC_PLANSZA+borderTop) {//jeśli plansza
+                    if (gra == 0) {
+                        kopiaPlansza();
+                        startGra();
+                        ustawPlansza();
+                        setGra(1);
+                    }
+                    if (start) {
+                        setStart(false);
+                    } else {
+                        setStart(true);
+                    }
+                } else if (touchX > gyroscopeLeft
+                        && touchX < gyroscopeLeft+gyroscopeWidth
+                        && touchY > gyroscopeTop
+                        && touchY < gyroscopeTop+gyroscopeWidth) {//jeśli żyroskop
+                    gyroscopeConfig = true;
                 }
         }
         return true;
@@ -172,10 +210,6 @@ public class Panel extends View {
         Plansza[poziom][pozycjaDuch[2]] = 6;
         Plansza[poziom][pozycjaDuch[3]] = 7;
         Plansza[poziom][pozycjaPacman] = kierunekPacman;
-    }
-
-    public int getKierunekPacman() {
-        return kierunekPacman;
     }
 
     private void zmienPlansza()//aktualizuje obrazek pacmana na planszy
@@ -218,7 +252,7 @@ public class Panel extends View {
             Plansza[poziom][staraPozycjaDuch[i]] = historiaDuch[i];
             boolean test = true;
             for (int j = 0; j < i; j++) {
-                if (Plansza[poziom][pozycjaDuch[i]] == Plansza[poziom][pozycjaDuch[j]] && i != j) {
+                if (Plansza[poziom][pozycjaDuch[i]] == Plansza[poziom][pozycjaDuch[j]]) {
                     if (Plansza[poziom][pozycjaDuch[i]] >= 4 || Plansza[poziom][pozycjaDuch[i]] <= 8) {
                         historiaDuch[i] = historiaDuch[j];
                     }
@@ -248,9 +282,16 @@ public class Panel extends View {
         for (int i = 0; i < liczbaDuch; i++) {
             zmienPlanszaDuch(i);
         }
+        Rect rect = new Rect(gyroscopeLeft, gyroscopeTop, gyroscopeLeft+gyroscopeWidth, gyroscopeTop+gyroscopeWidth);
+        gyroscope.setBounds(rect);
+        gyroscope.draw(canvas);
         for (int i = 0; i < SZEROKOSC_PLANSZA; i++) {//Rysowanie obrazów na planszy po zmianie pozycji gracza
             for (int j = 0; j < WYSOKOSC_PLANSZA; j++) {
-                obrazy[Plansza[poziom][i + SZEROKOSC_PLANSZA * j]].setBounds(border + i * ROZMIAR_GRAFIKA, border + j * ROZMIAR_GRAFIKA, border + i * ROZMIAR_GRAFIKA + ROZMIAR_GRAFIKA, border + j * ROZMIAR_GRAFIKA + ROZMIAR_GRAFIKA);
+                rect = new Rect(borderLeft + i * ROZMIAR_GRAFIKA,
+                        borderTop + j * ROZMIAR_GRAFIKA,
+                        borderLeft + i * ROZMIAR_GRAFIKA + ROZMIAR_GRAFIKA,
+                        borderTop + j * ROZMIAR_GRAFIKA + ROZMIAR_GRAFIKA);
+                obrazy[Plansza[poziom][i + SZEROKOSC_PLANSZA * j]].setBounds(rect);
                 obrazy[Plansza[poziom][i + SZEROKOSC_PLANSZA * j]].draw(canvas);
             }
         }
@@ -613,7 +654,7 @@ public class Panel extends View {
                 Toast.makeText(context, "Wygrałeś!", Toast.LENGTH_SHORT).show();
                 nastepnyPoziom();
             } else {
-                Toast.makeText(context, "Wygrałeś "+(poziom+1)+" poziom!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, "Wygrałeś " + (poziom + 1) + " poziom!", Toast.LENGTH_SHORT).show();
                 setGra(2);
                 setStart(false);
                 nastepnyPoziom();
@@ -709,9 +750,25 @@ public class Panel extends View {
         this.poziom = poziom;
     }
 
+    public int getBorderLeft() {
+        return borderLeft;
+    }
+
+    public int getBorderTop() {
+        return borderTop;
+    }
+
+    public boolean getGyroscopeConfig() {
+        return gyroscopeConfig;
+    }
+
+    public void setGyroscopeConfig(boolean gyroscopeConfig) {
+        this.gyroscopeConfig = gyroscopeConfig;
+    }
+
     public void kopiaPlansza() {
-        for (int i=0; i<LICZBA_POZIOM; i++) {
-            for (int j=0; j<Plansza[i].length; j++) {
+        for (int i = 0; i < LICZBA_POZIOM; i++) {
+            for (int j = 0; j < Plansza[i].length; j++) {
                 Plansza[i][j] = PlanszaReload[i][j];
             }
         }
