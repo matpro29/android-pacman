@@ -1,7 +1,7 @@
 android-pacman
 ========================
 
-Pacman
+Jest to port projektu java-pacman na Androida. Przystosowane jest sterowanie do żyroskopu, który można zresetować do aktualnej płaszczyzny.
 
 Jak uruchomić?
 --------------
